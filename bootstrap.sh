@@ -45,6 +45,8 @@ confirm_yes_no() {
 confirm_block() {
   local description="$1"
   local commands="$2"
+  local editable_command=""
+  local command_line=""
   echo "---"
   echo "Description:"
   printf '%s\n' "$description"
@@ -53,6 +55,9 @@ confirm_block() {
   printf '%s\n' "$commands"
   echo "---"
   if confirm_yes_no "Do you want to proceed?"; then
+    # Show a one-line editable command buffer before the scripted step runs.
+    command_line="${commands//$'\n'/; }"
+    read -e -r -p "Press Enter to run (editable): " -i "$command_line" editable_command
     return 0
   fi
   echo "Skipped."
@@ -202,6 +207,18 @@ if confirm_block \
 fi
 
 if confirm_block \
+  "When cloned from another repository, rename existing 'origin' to 'upstream' before creating your own origin." \
+  "git remote rename origin upstream"; then
+  if git remote get-url upstream >/dev/null 2>&1; then
+    echo "Remote 'upstream' already exists. Rename skipped."
+  elif git remote get-url origin >/dev/null 2>&1; then
+    git remote rename origin upstream
+  else
+    echo "Remote 'origin' does not exist. Rename skipped."
+  fi
+fi
+
+if confirm_block \
   "Create a private GitHub repository and set it as the 'origin' remote." \
   "gh repo create \"${GITHUB_OWNER}/${GITHUB_REPO}\" --private --source . --remote origin"; then
   if git remote get-url origin >/dev/null 2>&1; then
@@ -223,8 +240,8 @@ fi
 
 if confirm_block \
   "Register the public SSH key on the target server using ssh-copy-id." \
-  "ssh-copy-id -i \"$HOME/.ssh/${SSH_KEY_NAME}.pub\" \"${SSH_ALIAS_OR_USER_AT_HOST}\""; then
-  ssh-copy-id -i "$HOME/.ssh/${SSH_KEY_NAME}.pub" "${SSH_ALIAS_OR_USER_AT_HOST}"
+  "ssh-copy-id -f -i \"$HOME/.ssh/${SSH_KEY_NAME}.pub\" \"${SSH_ALIAS_OR_USER_AT_HOST}\""; then
+  ssh-copy-id -f -i "$HOME/.ssh/${SSH_KEY_NAME}.pub" "${SSH_ALIAS_OR_USER_AT_HOST}"
 fi
 
 if confirm_block \
@@ -256,10 +273,15 @@ if [ -z "${CURRENT_BRANCH}" ]; then
   CURRENT_BRANCH="master"
 fi
 
+PUSH_REMOTE="origin"
+if git remote get-url upstream >/dev/null 2>&1; then
+  PUSH_REMOTE="upstream"
+fi
+
 if confirm_block \
   "Push the current branch to GitHub and set upstream tracking." \
-  "git push -u origin ${CURRENT_BRANCH}"; then
-  git push -u origin "${CURRENT_BRANCH}"
+  "git push -u ${PUSH_REMOTE} ${CURRENT_BRANCH}"; then
+  git push -u "${PUSH_REMOTE}" "${CURRENT_BRANCH}"
 fi
 
 LATEST_PUSH_RUN_ID=""
