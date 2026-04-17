@@ -65,9 +65,12 @@ confirm_block() {
     if [ "$bash_major_version" -ge 4 ]; then
       read -e -r -p "Press Enter to run (editable): " -i "$command_line" editable_command
     else
-      echo "Your Bash (${BASH_VERSION}) does not support read -i (prefilled input)."
+      echo "Your Bash (${BASH_VERSION}) does not support read -i (prefilled editable input)."
       printf 'Command: %s\n' "$command_line"
-      read -e -r -p "Press Enter to run: " editable_command
+      read -e -r -p "Edit command (blank = use shown command): " editable_command
+      if [ -z "$editable_command" ]; then
+        editable_command="$command_line"
+      fi
     fi
     return 0
   fi
@@ -285,7 +288,9 @@ if [ -z "${CURRENT_BRANCH}" ]; then
 fi
 
 PUSH_REMOTE="origin"
-if git remote get-url upstream >/dev/null 2>&1; then
+if git remote get-url origin >/dev/null 2>&1; then
+  PUSH_REMOTE="origin"
+elif git remote get-url upstream >/dev/null 2>&1; then
   PUSH_REMOTE="upstream"
 fi
 
