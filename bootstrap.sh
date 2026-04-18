@@ -241,9 +241,9 @@ fi
 
 if confirm_block \
   "Collect the production host key and display its fingerprint for verification." \
-  "ssh-keyscan -H \"${PROD_HOST}\" > ${KNOWN_HOSTS_FILE}
+  "ssh-keyscan -p \"${PROD_PORT}\" -H \"${PROD_HOST}\" > ${KNOWN_HOSTS_FILE}
 ssh-keygen -lf ${KNOWN_HOSTS_FILE}"; then
-  ssh-keyscan -H "${PROD_HOST}" > "${KNOWN_HOSTS_FILE}"
+  ssh-keyscan -p "${PROD_PORT}" -H "${PROD_HOST}" > "${KNOWN_HOSTS_FILE}"
   ssh-keygen -lf "${KNOWN_HOSTS_FILE}"
 fi
 
