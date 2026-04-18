@@ -45,7 +45,6 @@ confirm_yes_no() {
 confirm_block() {
   local description="$1"
   local commands="$2"
-  local proceed_enter=""
   echo "---"
   echo "Description:"
   printf '%s\n' "$description"
@@ -54,7 +53,6 @@ confirm_block() {
   printf '%s\n' "$commands"
   echo "---"
   if confirm_yes_no "Do you want to proceed?"; then
-    read -r -p "Press Enter to run the commands shown above." proceed_enter
     return 0
   fi
   echo "Skipped."
