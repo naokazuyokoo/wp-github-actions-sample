@@ -223,6 +223,13 @@ if confirm_block \
   fi
 fi
 
+TARGET_REPO="${GITHUB_OWNER}/${GITHUB_REPO}"
+if confirm_block \
+  "Set GitHub CLI default repository to the repository created/used by this script." \
+  "gh repo set-default \"${TARGET_REPO}\""; then
+  gh repo set-default "${TARGET_REPO}"
+fi
+
 if [ -f "$HOME/.ssh/${SSH_KEY_NAME}" ]; then
   echo "Using existing SSH key: $HOME/.ssh/${SSH_KEY_NAME}"
 else
@@ -249,18 +256,18 @@ fi
 
 if confirm_block \
   "Store deployment settings and SSH credentials as GitHub Actions repository secrets." \
-  "gh secret set PROD_HOST --body \"${PROD_HOST}\"
-gh secret set PROD_USER --body \"${PROD_USER}\"
-gh secret set PROD_PORT --body \"${PROD_PORT}\"
-gh secret set PROD_PATH --body \"${PROD_PATH_TO_THEME}\"
-gh secret set PROD_SSH_KEY < \"${HOME}/.ssh/${SSH_KEY_NAME}\"
-gh secret set PROD_KNOWN_HOSTS < \"${KNOWN_HOSTS_FILE}\""; then
-  gh secret set PROD_HOST --body "${PROD_HOST}"
-  gh secret set PROD_USER --body "${PROD_USER}"
-  gh secret set PROD_PORT --body "${PROD_PORT}"
-  gh secret set PROD_PATH --body "${PROD_PATH_TO_THEME}"
-  gh secret set PROD_SSH_KEY < "${HOME}/.ssh/${SSH_KEY_NAME}"
-  gh secret set PROD_KNOWN_HOSTS < "${KNOWN_HOSTS_FILE}"
+  "gh secret set -R \"${TARGET_REPO}\" PROD_HOST --body \"${PROD_HOST}\"
+gh secret set -R \"${TARGET_REPO}\" PROD_USER --body \"${PROD_USER}\"
+gh secret set -R \"${TARGET_REPO}\" PROD_PORT --body \"${PROD_PORT}\"
+gh secret set -R \"${TARGET_REPO}\" PROD_PATH --body \"${PROD_PATH_TO_THEME}\"
+gh secret set -R \"${TARGET_REPO}\" PROD_SSH_KEY < \"${HOME}/.ssh/${SSH_KEY_NAME}\"
+gh secret set -R \"${TARGET_REPO}\" PROD_KNOWN_HOSTS < \"${KNOWN_HOSTS_FILE}\""; then
+  gh secret set -R "${TARGET_REPO}" PROD_HOST --body "${PROD_HOST}"
+  gh secret set -R "${TARGET_REPO}" PROD_USER --body "${PROD_USER}"
+  gh secret set -R "${TARGET_REPO}" PROD_PORT --body "${PROD_PORT}"
+  gh secret set -R "${TARGET_REPO}" PROD_PATH --body "${PROD_PATH_TO_THEME}"
+  gh secret set -R "${TARGET_REPO}" PROD_SSH_KEY < "${HOME}/.ssh/${SSH_KEY_NAME}"
+  gh secret set -R "${TARGET_REPO}" PROD_KNOWN_HOSTS < "${KNOWN_HOSTS_FILE}"
 fi
 
 CURRENT_BRANCH="$(git branch --show-current)"
@@ -284,10 +291,11 @@ fi
 LATEST_PUSH_RUN_ID=""
 if confirm_block \
   "Check the latest GitHub Actions run triggered by a push on this branch." \
-  "gh run list --workflow \"deploy-production.yml\" --branch ${CURRENT_BRANCH} --event push --limit 1"; then
-  gh run list --workflow "deploy-production.yml" --branch "${CURRENT_BRANCH}" --event push --limit 1
+  "gh run list -R \"${TARGET_REPO}\" --workflow \"deploy-production.yml\" --branch ${CURRENT_BRANCH} --event push --limit 1"; then
+  gh run list -R "${TARGET_REPO}" --workflow "deploy-production.yml" --branch "${CURRENT_BRANCH}" --event push --limit 1
   LATEST_PUSH_RUN_ID="$(
     gh run list \
+      -R "${TARGET_REPO}" \
       --workflow "deploy-production.yml" \
       --branch "${CURRENT_BRANCH}" \
       --event push \
@@ -298,15 +306,15 @@ if confirm_block \
   if [ -n "${LATEST_PUSH_RUN_ID}" ] && [ "${LATEST_PUSH_RUN_ID}" != "null" ]; then
     if confirm_block \
       "Watch the latest workflow run and wait until it completes." \
-      "gh run watch ${LATEST_PUSH_RUN_ID} --exit-status"; then
-      gh run watch "${LATEST_PUSH_RUN_ID}" --exit-status
+      "gh run watch -R \"${TARGET_REPO}\" ${LATEST_PUSH_RUN_ID} --exit-status"; then
+      gh run watch -R "${TARGET_REPO}" "${LATEST_PUSH_RUN_ID}" --exit-status
     fi
   else
     echo "No push-triggered run found yet."
     if confirm_block \
       "Trigger the deployment workflow manually for the current branch." \
-      "gh workflow run \"Deploy Theme to Production\" --ref ${CURRENT_BRANCH}"; then
-      gh workflow run "Deploy Theme to Production" --ref "${CURRENT_BRANCH}"
+      "gh workflow run -R \"${TARGET_REPO}\" \"Deploy Theme to Production\" --ref ${CURRENT_BRANCH}"; then
+      gh workflow run -R "${TARGET_REPO}" "Deploy Theme to Production" --ref "${CURRENT_BRANCH}"
     fi
   fi
 fi
